@@ -1,31 +1,44 @@
+## audio duration >= transcript duration
 import argparse
+import json
 import os
 
 from pydub import AudioSegment
 
-import whisperx
+from utils import read, write
+from whisperx.new_alignment import align, load_align_model, load_audio
 
+
+def fix_json_string(text):
+    formatted_text = text.replace("'", '"').replace("\n", "\\n")
+    return formatted_text
+
+    # keys = ["word", "start", "end", "score", "text"]
+    # for key in keys:
+    #     text = text.replace(f"'{key}':", f'"{key}":')
 
 def get_audio_duration(audio_file):
     audio = AudioSegment.from_file(audio_file)
     return len(audio) / 1000.0  # Duration in seconds
 
 def load_and_align(audio_file, transcript_file, out_file, device="cpu", language_code="hi"):
-    audio = whisperx.load_audio(audio_file)
+    audio = load_audio(audio_file)
     audio_duration = get_audio_duration(audio_file)
 
-    model_a, metadata = whisperx.load_align_model(language_code=language_code, device=device, model_dir="models/")
+    model_a, metadata = load_align_model(language_code=language_code, device=device, model_dir="models/")
 
-    with open(transcript_file, "r") as f:
-        transcript = f.read()
+    transcript = read(transcript_file)
 
-    alignment_result = whisperx.align(
+    alignment_result = align(
         [{"text": transcript, 'start': 0, 'end': audio_duration}],
         model_a, metadata, audio, device, return_char_alignments=False
     )
 
-    with open(out_file, "w") as f:
-        print(alignment_result["segments"], file=f)
+    write(out_file, alignment_result["segments"][0]["text"])
+    # breakpoint()
+    # out = json.loads(fix_json_string(alignment_result["segments"][0]["text"]))
+    # with open(out_file, "w") as f:
+    #     json.dump(out, f, indent=2, ensure_ascii=False)
 
     print(f"Alignment completed. Output saved to {out_file}.")
 
@@ -35,7 +48,7 @@ def main():
     parser.add_argument("--data_dir", type=str, required=True, help="Path to the data directory.")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to run the model.")
     parser.add_argument("--language_code", type=str, default="hi", help="Language code for alignment (e.g., 'hi' for Hindi).")
-    parser.add_argument("--out_name", type=str, default="aligned", help="Prefix for the output file.")
+    parser.add_argument("--out_name", type=str, default="aligned", help="Output file.")
 
     args = parser.parse_args()
     audio_file = None
@@ -56,8 +69,13 @@ def main():
         language_code=args.language_code,
     )
 
-
+def test():
+    text = read("data/test/test.txt")
+    pr = fix_json_string(text)
+    breakpoint()
+    
+    print(json.loads(pr))
+    
 if __name__ == "__main__":
     main()
-if __name__ == "__main__":
-    main()
+    # test()

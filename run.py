@@ -1,6 +1,7 @@
 import gc
 
 import torch
+
 import whisperx
 
 device = "cpu" 
@@ -13,10 +14,10 @@ compute_type = "int8"   #"float16" # change to "int8" if low on GPU mem (may red
 # model = whisperx.load_model("large-v2", device, compute_type=compute_type)
 
 # save model to local path (optional)
-# model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root="models/")
+model = whisperx.load_model("large-v2", device, compute_type=compute_type, download_root="models/")
 
 audio = whisperx.load_audio(audio_file)
-# result = model.transcribe(audio, batch_size=batch_size)
+result = model.transcribe(audio, batch_size=batch_size)
 # print(result["segments"]) # before alignment
 
 # delete model if low on GPU resources
