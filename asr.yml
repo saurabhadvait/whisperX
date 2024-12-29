@@ -4,33 +4,56 @@ channels:
   - pytorch
   - defaults
 dependencies:
+  - annotated-types=0.7.0
+  - anyio=4.7.0
   - asttokens=2.0.5
+  - backports=1.0
+  - backports.functools_lru_cache=2.0.0
   - bzip2=1.0.8
-  - ca-certificates=2024.7.2
+  - ca-certificates=2024.12.14
+  - colorama=0.4.6
   - decorator=5.1.1
+  - distro=1.9.0
   - exceptiongroup=1.2.0
   - executing=0.8.3
+  - h11=0.14.0
+  - h2=4.1.0
+  - hpack=4.0.0
+  - httpcore=1.0.7
+  - httpx=0.28.1
+  - hyperframe=6.0.1
   - ipython=8.25.0
   - jedi=0.19.1
+  - jiter=0.6.1
   - libffi=3.4.4
+  - libsqlite=3.45.3
+  - libzlib=1.2.13
   - matplotlib-inline=0.1.6
-  - ncurses=6.4
-  - openssl=3.0.14
+  - ncurses=6.4.20240210
+  - openai=1.59.0
+  - openssl=3.4.0
   - parso=0.8.3
   - pexpect=4.8.0
+  - pickleshare=0.7.5
   - pip=24.2
   - prompt-toolkit=3.0.43
   - prompt_toolkit=3.0.43
   - ptyprocess=0.7.0
   - pure_eval=0.2.2
+  - pydantic=2.10.3
+  - pydantic-core=2.27.1
+  - pygments=2.18.0
   - python=3.10.14
   - readline=8.2
   - setuptools=72.1.0
   - six=1.16.0
+  - sniffio=1.3.1
   - sqlite=3.45.3
   - stack_data=0.2.0
   - tk=8.6.14
   - traitlets=5.14.3
+  - typing-extensions=4.12.2
+  - typing_extensions=4.12.2
   - wcwidth=0.2.5
   - wheel=0.43.0
   - xz=5.4.6
@@ -112,7 +135,6 @@ dependencies:
       - pyannote-pipeline==3.0.1
       - pycparser==2.22
       - pydub==0.25.1
-      - pygments==2.18.0
       - pyparsing==3.1.4
       - pytest==8.3.2
       - python-dateutil==2.9.0.post0
@@ -152,7 +174,6 @@ dependencies:
       - tqdm==4.66.5
       - transformers==4.39.3
       - typer==0.12.5
-      - typing-extensions==4.12.2
       - tzdata==2024.1
       - urllib3==2.2.2
       - whisperx==3.1.6

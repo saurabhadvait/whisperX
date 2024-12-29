@@ -4,7 +4,12 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from pydub import AudioSegment
 
+
+def get_audio_duration(audio_file):
+    audio = AudioSegment.from_file(audio_file)
+    return len(audio) / 1000.0  # Duration in seconds
 
 def write(file_path: str, data: Any, verbose: bool = True):
     file_path = Path(file_path)

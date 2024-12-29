@@ -11,6 +11,7 @@ import pandas as pd
 import torch
 import torchaudio
 from nltk.tokenize.punkt import PunktParameters, PunktSentenceTokenizer
+from tqdm import tqdm
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
 from .audio import SAMPLE_RATE, load_audio
@@ -343,34 +344,14 @@ def align(
 
 
 def audio_model_inference(model, device, model_type, waveform_segment):
-    """
-    Perform inference on audio by splitting it into manageable chunks and padding the last chunk if necessary.
-
-    Parameters:
-        model: The alignment model.
-        device: The device to run the model on ("cpu", "cuda").
-        model_type: Type of model ("torchaudio" or "huggingface").
-        waveform_segment: The input audio waveform segment (torch.Tensor, shape: [1, N]).
-
-    Returns:
-        tuple: (Processed waveform_segment, Emissions tensor of shape [time, vocab]).
-    """
-    # Define chunk size in frames (10 seconds per chunk)
     BATCH_SIZE_SECONDS = 10
     chunk_size = BATCH_SIZE_SECONDS * SAMPLE_RATE
 
     total_frames = waveform_segment.shape[-1]
-    
-    # # Handle the minimum input length for wav2vec2 models
-    # remainder = total_frames % chunk_size
-    # if remainder > 0 and remainder < 400:
-    #     padding = 400 - remainder
-    #     waveform_segment = torch.nn.functional.pad(waveform_segment, (0, padding))
-    #     total_frames = waveform_segment.shape[-1]  # Update total_frames after padding
     emissions_list = []
 
     with torch.inference_mode():
-        for start_idx in range(0, total_frames, chunk_size):
+        for start_idx in tqdm(range(0, total_frames, chunk_size)):
             end_idx = min(start_idx + chunk_size, total_frames)
             chunk = torch.nn.functional.pad(waveform_segment[:, start_idx:end_idx], (0, 320))
 
