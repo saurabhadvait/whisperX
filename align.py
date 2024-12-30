@@ -48,16 +48,8 @@ def load_and_align(audio_file, transcript_file, out_file, device="cpu", language
     return out
 
 def plot_alignment_with_gradient(out: List[Dict[str, Any]], save_path=None):
-    """
-    Plot the word alignments with a gradient background and display Hindi text.
-    
-    Inputs:
-        out: List of dictionaries containing word timing information.
-             Each dict has 'word', 'start', and 'end' keys.
-    """
     out = [item for item in out if all(key in item for key in ['word', 'start', 'end'])]
 
-    # Extract word info
     words = [item['word'] for item in out]
     starts = [item['start'] for item in out]
     ends = [item['end'] for item in out]
