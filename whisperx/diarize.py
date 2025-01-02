@@ -1,22 +1,25 @@
+from typing import Optional, Union
+
 import numpy as np
 import pandas as pd
-from pyannote.audio import Pipeline
-from typing import Optional, Union
 import torch
+from pyannote.audio import Pipeline
 
-from .audio import load_audio, SAMPLE_RATE
+from .audio import SAMPLE_RATE, load_audio
 
 
 class DiarizationPipeline:
     def __init__(
         self,
         model_name="pyannote/speaker-diarization-3.1",
-        use_auth_token=None,
+        # use_auth_token=None,
         device: Optional[Union[str, torch.device]] = "cpu",
     ):
         if isinstance(device, str):
             device = torch.device(device)
-        self.model = Pipeline.from_pretrained(model_name, use_auth_token=use_auth_token).to(device)
+        self.model = Pipeline.from_pretrained(model_name)
+        self.model = self.model.to(device)
+        # self.model = Pipeline.from_pretrained(model_name, use_auth_token=True).to(device)
 
     def __call__(self, audio: Union[str, np.ndarray], num_speakers=None, min_speakers=None, max_speakers=None):
         if isinstance(audio, str):

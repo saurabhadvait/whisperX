@@ -1,0 +1,31 @@
+{
+  "model": "gpt-4o-audio-preview",
+  "messages": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "text": "Transcribe the provided audio, ensuring an exact and verbatim transcription of words in their respective original languages. \n\n# Steps\n\n1. Listen carefully to the entire provided audio.\n2. Identify the language of each word as it occurs.\n3. Transcribe each word exactly as spoken, retaining its original language, without transliterating.\n\n# Output Format\n\n- Provide the full transcription as a plain paragraph.\n- Ensure accuracy in spelling for all languages used.",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "input_audio": {
+            "format": "mp3"
+          },
+          "type": "input_audio"
+        }
+      ]
+    }
+  ],
+  "modalities": ["text"],
+  "temperature": 0,
+  "max_completion_tokens": 16384,
+  "top_p": 1,
+  "frequency_penalty": 0,
+  "presence_penalty": 0
+}

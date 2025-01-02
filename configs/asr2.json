@@ -1,0 +1,31 @@
+{
+  "model": "gpt-4o-audio-preview-2024-12-17",
+  "messages": [
+    {
+      "role": "system",
+      "content": [
+        {
+          "text": "You are an advanced transcriptor. Output the speaker-diarized transcript of the provided audio with words in their respective original languages.",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "input_audio",
+          "input_audio": {
+            "format": "mp3"
+          }
+        }
+      ]
+    }
+  ],
+  "modalities": ["text"],
+  "temperature": 0,
+  "max_completion_tokens": 16384,
+  "top_p": 1,
+  "frequency_penalty": 0,
+  "presence_penalty": 0
+}
