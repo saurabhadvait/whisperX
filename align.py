@@ -49,76 +49,9 @@ def add_speaker_diarization(audio, alignment_result, device="cpu", num_speakers=
     print("Running speaker diarization...")
     diarize_model = whisperx.DiarizationPipeline(device=device)
     diarize_segments = diarize_model(audio, num_speakers=num_speakers, min_speakers=min_speakers, max_speakers=max_speakers)
-    diarize_segments.to_json("diarize.json", indent=2)
-    # Assign speaker labels to words in the alignment result
     result_with_speakers = whisperx.assign_word_speakers(diarize_segments, alignment_result)
     print("Speaker diarization completed.")
     return result_with_speakers
-
-
-def main():
-    parser = argparse.ArgumentParser(description="WhisperX Audio Alignment Script with Speaker Identification")
-    parser.add_argument("--data", "-d", type=str, required=True, help="Path to the data directory or audio file.")
-    parser.add_argument("--out_name", "-o", type=str, default=None, help="Output file name.")
-    parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to run the model.")
-    parser.add_argument("--lang", type=str, default="hi", help="Language code for alignment (e.g., 'hi' for Hindi).")
-    parser.add_argument("--fresh", action="store_true", help="Run alignment.")
-    parser.add_argument("--diarize", action="store_true", help="Run speaker diarization.")
-
-    args = parser.parse_args()
-    audio_file = None
-    transcript_file = None
-    if os.path.isfile(args.data):
-        assert args.data.endswith(".mp3"), "Only MP3 audio files are supported."
-        audio_file = args.data
-        args.data_dir = os.path.dirname(audio_file)
-    elif os.path.isdir(args.data):
-        args.data_dir = args.data
-    else:
-        raise ValueError(f"Invalid data path: {args.data}")
-
-    for file in os.listdir(args.data_dir):
-        if not audio_file and file.endswith(".mp3"):
-            audio_file = os.path.join(args.data_dir, file)
-        elif file.endswith(".txt"):
-            transcript_file = os.path.join(args.data_dir, file)
-
-    args.out_name = args.out_name or os.path.basename(args.data_dir)
-
-    out_file = os.path.join(args.data_dir, f"{args.out_name}.json")
-
-    assert audio_file is not None, f"No audio file found in {args.data_dir}."
-    assert transcript_file is not None, f"No transcript file found in {args.data_dir}."
-    audio = load_audio(audio_file)
-    
-    if os.path.exists(out_file) and not args.fresh:
-        alignment_result = read(out_file)
-        print(f"Alignment result already exists at {out_file}.")
-    else:
-        alignment_result = load_and_align(
-            audio=audio,
-            transcript_file=transcript_file,
-            out_file=out_file,
-            device=args.device,
-            language_code=args.lang
-        )
-    words = []
-    for segment in alignment_result["segments"]:
-        words.extend(segment["words"])
-    with open(os.path.join(args.data_dir, f"score_transcript.txt"), "w") as f:
-        for word in words:
-            if "score" in word:
-                f.write(f"{word['word']}[{word['score']}] ")
-            else:
-                f.write(f"{word['word']} ")    
-    
-    if args.diarize:
-        alignment_result = read(out_file)
-        result_with_speakers = add_speaker_diarization(audio, alignment_result, device=args.device, min_speakers=1, max_speakers=2)
-
-        diarized_out_file = os.path.join(args.data_dir, f"{args.out_name}_diarized.json")
-        write(diarized_out_file, result_with_speakers)
-        print(f"Diarized output saved to {diarized_out_file}.")
 
 def main():
     parser = argparse.ArgumentParser(description="WhisperX Audio Alignment Script with Speaker Identification")
@@ -126,6 +59,7 @@ def main():
     parser.add_argument("-o", "--out_name", type=str, default=None, help="Output file name.")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to run the model.")
     parser.add_argument("--lang", type=str, default="hi", help="Language code for alignment.")
+    parser.add_argument("--num_speakers", type=int, default=None, help="Number of speakers to diarize.")
     parser.add_argument("--fresh", action="store_true", help="Run alignment from scratch.")
     parser.add_argument("--score", action="store_true", help="Include word scores in the transcript.")
     parser.add_argument("--diarize", action="store_true", help="Run speaker diarization.")
@@ -137,17 +71,21 @@ def main():
         data_dir = os.path.dirname(audio_file)
     elif os.path.isdir(args.data):
         data_dir = args.data
-        audio_file = next((os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".mp3")), FileNotFoundError(f"No MP3 audio file found in {data_dir}."))
+        audio_file = next((os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".mp3")), None)
+        if audio_file is None:
+            raise FileNotFoundError(f"No MP3 audio file found in {data_dir}.")
     else:
         raise ValueError(f"Invalid data path: {args.data}")
     
-    transcript_file = next((os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".txt")), FileNotFoundError(f"No TXT transcript file found in {data_dir}."))
+    transcript_file = next((os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".txt")), None)
+    if transcript_file is None:
+        raise FileNotFoundError(f"No TXT transcript file found in {data_dir}.")
     args.out_name = args.out_name or os.path.basename(data_dir)
     out_file = os.path.join(data_dir, f"{args.out_name}.json")
 
     if os.path.exists(out_file) and not args.fresh:
         alignment_result = read(out_file)
-        print(f"Alignment result loaded from {out_file}.")
+        print(f"Existing Alignment result loaded from {out_file}.")
     else:
         audio = load_audio(audio_file)
         alignment_result = load_and_align(
@@ -168,8 +106,7 @@ def main():
             audio=load_audio(audio_file), 
             alignment_result=alignment_result, 
             device=args.device, 
-            min_speakers=1, 
-            max_speakers=5
+            num_speakers=args.num_speakers,
         )
         diarized_out_file = os.path.join(data_dir, f"{args.out_name}_diarized.json")
         write(diarized_out_file, result_with_speakers)
