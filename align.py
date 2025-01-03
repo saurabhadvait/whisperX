@@ -58,7 +58,7 @@ def add_speaker_diarization(audio, alignment_result, device="cpu", num_speakers=
 
 def main():
     parser = argparse.ArgumentParser(description="WhisperX Audio Alignment Script with Speaker Identification")
-    parser.add_argument("--data_dir", "-d", type=str, required=True, help="Path to the data directory.")
+    parser.add_argument("--data", "-d", type=str, required=True, help="Path to the data directory or audio file.")
     parser.add_argument("--out_name", "-o", type=str, default=None, help="Output file name.")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda", "mps"], help="Device to run the model.")
     parser.add_argument("--lang", type=str, default="hi", help="Language code for alignment (e.g., 'hi' for Hindi).")
@@ -68,13 +68,23 @@ def main():
     args = parser.parse_args()
     audio_file = None
     transcript_file = None
+    if os.path.isfile(args.data):
+        assert args.data.endswith(".mp3"), "Only MP3 audio files are supported."
+        audio_file = args.data
+        args.data_dir = os.path.dirname(audio_file)
+    elif os.path.isdir(args.data):
+        args.data_dir = args.data
+    else:
+        raise ValueError(f"Invalid data path: {args.data}")
+
     for file in os.listdir(args.data_dir):
-        if file.endswith(".mp3"):
+        if not audio_file and file.endswith(".mp3"):
             audio_file = os.path.join(args.data_dir, file)
         elif file.endswith(".txt"):
             transcript_file = os.path.join(args.data_dir, file)
-    if not args.out_name:
-        args.out_name = os.path.basename(args.data_dir)
+
+    args.out_name = args.out_name or os.path.basename(args.data_dir)
+
     out_file = os.path.join(args.data_dir, f"{args.out_name}.json")
 
     assert audio_file is not None, f"No audio file found in {args.data_dir}."

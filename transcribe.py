@@ -54,7 +54,6 @@ if __name__ == "__main__":
     audio_path = args.audio_path
     if not args.out_path:
         out_path = audio_path.replace(".mp3", "_transcript.txt")
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     start_time = time.time()
     transcript = transcribe_audio(audio_path, config_path=f"configs/{args.config}.json").strip("...")
     time_taken = time.time() - start_time
