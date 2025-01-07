@@ -1,14 +1,28 @@
 import json
 import os
 import pickle
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List
 
 import numpy as np
+import torch
+from langdetect import detect
 from pydub import AudioSegment
 
 
-def get_audio_duration(audio_file):
+def get_language_from_transcript(transcript: str) -> str:
+    if not transcript.strip():
+        raise ValueError("Transcript is empty.")
+    return detect(transcript)
+    
+@lru_cache(maxsize=None)
+def get_preferred_device() -> torch.device:
+    if torch.cuda.is_available(): return torch.device("cuda")
+    elif torch.backends.mps.is_available(): return torch.device("mps")
+    else: return torch.device("cpu")
+
+def get_audio_duration(audio_file: str) -> float:
     audio = AudioSegment.from_file(audio_file)
     return len(audio) / 1000.0  # Duration in seconds
 
@@ -46,7 +60,7 @@ def read(file_path: str, verbose: bool = True) -> Any:
     print(f"Read {file_path}") if verbose else None
     return data
 
-def plot_scores(alignment_result, args):    
+def plot_scores(alignment_result: Dict[str, Any], args: Any):
     from matplotlib import pyplot as plt
     scores, times = zip(*[(w["score"], w["start"]) for w in alignment_result["segments"][0]["words"] if "score" in w])
     plt.plot(times, scores)
@@ -91,7 +105,7 @@ def plot_alignment_with_gradient(out: List[Dict[str, Any]], save_path=None):
         plt.savefig(save_path)
     plt.show()
     
-def download_video(url, output_dir, start_time=None, end_time=None):
+def download_video(url: str, output_dir: str, start_time: str = None, end_time: str = None) -> bool:
     time_range = ""
     if start_time or end_time:
         start_time = start_time if start_time else "0"
@@ -100,7 +114,7 @@ def download_video(url, output_dir, start_time=None, end_time=None):
     os.system(f"yt-dlp --output '{output_dir}/%(title)s.%(ext)s'{time_range} {url}")
     return True
 
-def download_audio(url, output_dir, start_time=None, end_time=None):    # time=01:02:03
+def download_audio(url: str, output_dir: str, start_time: str = None, end_time: str = None) -> bool:    # time=01:02:03
     time_range = ""
     if start_time or end_time:
         start_time = start_time if start_time else "0"
