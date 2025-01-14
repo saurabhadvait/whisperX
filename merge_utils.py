@@ -46,7 +46,8 @@ def merge(first_tr: str, second_tr: str) -> str:
     print(f"{ml} Matching tokens:{tokens_f[sf:sf+ml]}")
     if ml == 0 and len(tokens_f) > 0 and len(tokens_s) > 0:
         raise ValueError(f"No overlap found between the two transcripts: $${first_tr}\n$$\n{second_tr}")
-
+    if ml < 10:
+        print(f"WARNING: Low overlap found between the two transcripts: {ml} tokens. Probably error in transcripts. Check them...")
     return {
         "merged": first_tr[: f[sf + ml - 1]["end"]] + second_tr[s[ss + ml - 1]["end"] :],
         "end_of_second": s[ss + ml - 1]["end"],  # start is inclusive and end is exclusive
@@ -66,5 +67,5 @@ if __name__ == "__main__":
     देगा: जिसको।। हम संस्कृति-blah या culture कह सकते हैं। ल
     किन धार्मिकता के केंद्र में बंधनों """
 
-    second_transcript = r"""kyo;हम-संस्कृति blah या culture कह सकते हैं। लेकिन धार्मिकता के केंद्र में kya hoga बंधनों ka"""
+    second_transcript = r"""kyo;हम-संस्कृति blah या culture     कह सकते हैं। लेकिन      धार्मिकता के केंद्र में kya hoga बंधनों ka"""
     print(f"Merged Transcript:{merge(first_transcript, second_transcript)}")

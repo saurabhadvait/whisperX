@@ -3,6 +3,7 @@ import json
 import os
 import time
 from argparse import ArgumentParser
+from functools import partial
 from typing import Optional
 
 from omegaconf import OmegaConf
@@ -15,14 +16,13 @@ from merge_utils import merge
 from utils import (get_language_from_transcript, get_preferred_device, read,
                    write)
 
-CHUNK_DURATION = int(2 * 60 * 1000)  # 12 minutes in milliseconds
-CHUNK_OVERLAP = int(1 * 60 * 1000)    # 2 minutes in milliseconds
+read = partial(read, verbose=False)
+
+CHUNK_DURATION = int(2 * 60 * 1000)  # in milliseconds
+CHUNK_OVERLAP = int(0.5 * 60 * 1000)
 DEVICE = get_preferred_device()
 
 def transcribe_audio(audio_path: str, config_path: str) -> str:
-    # with open(config_path, "r") as f:
-    #     config = json.load(f)
-    print("Using config:", config_path)
     config = OmegaConf.to_container(OmegaConf.load(config_path), resolve=True)
 
     with open(audio_path, "rb") as f:
@@ -64,11 +64,11 @@ def split_audio(audio_path: str, tmp_dir: str, sample_rate: int = 16000):
     print(f"Audio split into {len(os.listdir(tmp_dir))} chunks at {sample_rate}Hz.")
     os.symlink(os.path.abspath(audio_path), os.path.join(tmp_dir, "original.wav"))
 
-def transcribe_chunks(tmp_dir: str, config: str):
+def transcribe_chunks(tmp_dir: str, config_path: str):
     for chunk_file in tqdm(sorted([f for f in os.listdir(tmp_dir) if f.endswith(".mp3")]), desc="Transcribing"):
         chunk_path = os.path.join(tmp_dir, chunk_file)
         start_time = time.time()
-        transcript = transcribe_audio(chunk_path, config_path=f"configs/{config}").strip("...")
+        transcript = transcribe_audio(chunk_path, config_path=config_path).strip("...")
         time_taken = time.time() - start_time
 
         with open(chunk_path.replace(".mp3", "_transcript.txt"), "w") as f:
@@ -109,7 +109,7 @@ def diarize(tmp_dir: str, num_speakers: int | None):
         )
         print(f"Diarization saved to {out_file}.")
 
-def merge_transcripts(tmp_dir: str) -> str:
+def concat_transcripts(tmp_dir: str) -> str:
     final_transcript = "\n\n----------------------------------------\n\n".join(
         open(os.path.join(tmp_dir, f)).read().strip()
         for f in sorted(f for f in os.listdir(tmp_dir) if f.endswith("_transcript.txt"))
@@ -117,19 +117,15 @@ def merge_transcripts(tmp_dir: str) -> str:
     write(os.path.join(tmp_dir, "full_transcript.txt"), final_transcript)
     return final_transcript
 
-def test_merge_transcripts(tmp_dir: str) -> str:
+def merge_transcripts(tmp_dir: str) -> str:
     final_transcript = ""
-    end = 0
-    for f in sorted(f for f in os.listdir(tmp_dir)):
-        if f.endswith("_transcript.txt"):
-            if not final_transcript:
-                final_transcript = open(os.path.join(tmp_dir, f)).read().strip()
-                continue
-            out = merge(final_transcript[end:], open(os.path.join(tmp_dir, f)).read().strip())
-            final_transcript = final_transcript[:end] + out["merged"]
-            end += out["end_in_merged"]
-            
-    write(os.path.join(tmp_dir, "test_full_transcript.txt"), final_transcript)
+    for f in sorted(f for f in os.listdir(tmp_dir) if f.startswith("chunk_") and f.endswith("_transcript.txt")):
+        next_text = read(os.path.join(tmp_dir, f)).strip()
+        if not final_transcript:
+            final_transcript = next_text
+            continue
+        final_transcript = final_transcript[:-1000] + merge(final_transcript[-1000:], next_text[:1000])["merged"] + next_text[1000:]
+    write(os.path.join(tmp_dir, "full_transcript.txt"), final_transcript)
     return final_transcript
 
 def parse_args():
@@ -138,6 +134,7 @@ def parse_args():
     parser.add_argument("--config", type=str, default="asr_final.json", help="Name of the configuration file.") # best is asr_final_from_chatui.yaml
     parser.add_argument("--out_dir_suffix", type=str, default="", help="Suffix to append to the output directory.")
     parser.add_argument("--num_speakers", type=int, default=None, help="Number of speakers to diarize.")
+    parser.add_argument("-t", "--transcribe", action="store_true", help="Run transcription.")
     parser.add_argument("-a", "--align", action="store_true", help="Run alignment after transcription.")
     parser.add_argument("-d", "--diarize", action="store_true", help="Run speaker diarization.")
     parser.add_argument("--fresh", action="store_true", help="Run everything from scratch.")
@@ -148,20 +145,22 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()        
     tmp_dir = f"tmp_{os.path.basename(args.audio_path).replace('.mp3', '')}{args.out_dir_suffix}"
-    # if os.path.exists(tmp_dir):
-    #     if args.fresh:
-    #         print(f"Removing existing temporary directory {tmp_dir}.")
-    #         os.system(f"rm -rf {tmp_dir}")
-    #     else:
-    #         raise FileExistsError(f"Temporary directory {tmp_dir} already exists. Use --fresh to overwrite.")
+    if os.path.exists(tmp_dir):
+        if args.fresh:
+            print(f"Removing existing temporary directory {tmp_dir}.")
+            os.system(f"rm -rf {tmp_dir}")
+        else:
+            raise FileExistsError(f"Temporary directory {tmp_dir} already exists. Use --fresh to overwrite.")
         
-    # split_audio(args.audio_path, tmp_dir)
-    # transcribe_chunks(tmp_dir, args.config)
-    test_merge_transcripts(tmp_dir)
+    split_audio(args.audio_path, tmp_dir)
+    if args.transcribe:
+        config_path = f"configs/{args.config}"
+        print("Using config:", config_path)
+        transcribe_chunks(tmp_dir, config_path)
+        merge_transcripts(tmp_dir)
     
     if args.align:
         align(tmp_dir)
-
     
-    # if args.diarize:
-    #     diarize(tmp_dir, args.num_speakers)
+    if args.diarize:
+        diarize(tmp_dir, args.num_speakers)

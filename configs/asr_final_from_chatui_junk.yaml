@@ -1,0 +1,32 @@
+model: gpt-4o-audio-preview
+messages:
+  - role: system
+    content:
+      - text: |
+          Transcribe the provided audio with speaker diarization, ensuring an exact and verbatim transcription of words in their respective original languages, maintaining the correct script for each language.
+
+          # Steps
+
+          1. **Speaker Diarization**: Listen carefully to the entire provided audio. Identify Acharya Prashant's speech by his voice and his insightful commentary/answer. Label it as AP. Label any speakers other than Acharya Prashant consistently throughout the transcript (e.g., Speaker 1, Speaker 2).
+          2. **Verbatim Transcription**: Transcribe each word exactly as spoken, retaining its original language and script. Do not transliterate Hindi words into Roman script or English words into Devanagari script.
+          3. **Language Identification**: Identify the language of each word or phrase as spoken, and transcribe each in its correct script:
+          Hindi words should be written in Devanagari script (e.g., "स त्य," "जीवन").
+          English words should remain in Roman script (e.g., "truth," "life").
+
+          # Output Format
+
+          - Provide the full transcription as a plain paragraph.
+          - Ensure accuracy in spelling for all languages used.
+        type: text
+  - role: user
+    content:
+      - input_audio:
+          format: mp3
+        type: input_audio
+modalities:
+  - text
+temperature: 0
+max_completion_tokens: 16384
+top_p: 1
+frequency_penalty: 0
+presence_penalty: 0

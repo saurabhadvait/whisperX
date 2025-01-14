@@ -5,4 +5,5 @@ whisperx.egg-info/
 .ipynb_checkpoints
 models/**
 data/**
-tmp_*/**
+**/tmp_*/**
+results/**
