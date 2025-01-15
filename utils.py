@@ -4,15 +4,28 @@ import pickle
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TypeAlias, Union
 
 import numpy as np
 import torch
 from langdetect import detect
 from pydub import AudioSegment
 
+PATH_LIKE: TypeAlias = Union[str, os.PathLike]
 
-def get_language_from_transcript(transcript: str) -> str:
+class bcolors:
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKGREEN = "\033[92m"
+    OKCYAN = "\033[96m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+
+def detect_language(transcript_file: PATH_LIKE) -> str:
+    transcript = read(transcript_file)
     if not transcript.strip():
         raise ValueError("Transcript is empty.")
     return detect(transcript)
@@ -23,11 +36,11 @@ def get_preferred_device() -> torch.device:
     elif torch.backends.mps.is_available(): return torch.device("mps")
     else: return torch.device("cpu")
 
-def get_audio_duration(audio_file: str) -> float:
+def get_audio_duration(audio_file: PATH_LIKE) -> float:
     audio = AudioSegment.from_file(audio_file)
     return len(audio) / 1000.0  # Duration in seconds
 
-def write(file_path: str, data: Any, verbose: bool = True):
+def write(file_path: PATH_LIKE, data: Any, verbose: bool = True):
     file_path = Path(file_path)
     if file_path.suffix == ".json":
         with open(file_path, "w", encoding="utf-8") as f:
@@ -43,7 +56,7 @@ def write(file_path: str, data: Any, verbose: bool = True):
     print(f"Wrote to {file_path}") if verbose else None
 
 
-def read(file_path: str, verbose: bool = True) -> Any:
+def read(file_path: PATH_LIKE, verbose: bool = True) -> Any:
     file_path = Path(file_path)
     if file_path.suffix == ".json":
         with open(file_path, "r", encoding="utf-8") as f:

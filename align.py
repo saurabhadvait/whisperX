@@ -4,7 +4,7 @@ import os
 from functools import partial
 
 import whisperx
-from utils import read, write
+from utils import PATH_LIKE, read, write
 from whisperx.new_alignment import (AlignedTranscriptionResult, align,
                                     load_align_model, load_audio)
 
@@ -13,9 +13,9 @@ write = partial(write, verbose=False)
 
 
 def align_and_save(
-    audio_file: str,
-    transcript_file: str,
-    out_file: str,
+    audio_file: PATH_LIKE,
+    transcript_file: PATH_LIKE,
+    out_file: PATH_LIKE,
     device: str = "cpu",
     language_code: str = "hi",
 ) -> AlignedTranscriptionResult:

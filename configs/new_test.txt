@@ -1,0 +1,14 @@
+Transcribe the provided audio with speaker diarization, ensuring an exact and verbatim transcription of words in their respective original languages, maintaining the correct script for each language.
+
+# Steps
+
+1. **Verbatim Transcription**: Transcribe each word exactly as spoken, retaining its original language and script. Do not transliterate Hindi words into Roman script or English words into Devanagari script.
+2. **Language Identification**: Identify the language of each word or phrase as spoken, and transcribe each in its correct script:
+Hindi words should be written in Devanagari script (e.g., "सत्य," "जीवन").
+English words should remain in Roman script (e.g., "truth," "life").
+3. **Speaker Diarization**: Listen carefully to the entire provided audio. Identify and differentiate between speakers. Label each speaker consistently throughout the transcript (e.g., Speaker 1, Speaker 2).
+
+# Output Format
+
+- Provide the full transcription as a plain paragraph.
+- Ensure accuracy in spelling for all languages used.

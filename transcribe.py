@@ -13,12 +13,13 @@ from tqdm import tqdm
 
 from align import add_speaker_diarization, align_and_save
 from merge_utils import merge
-from utils import (get_language_from_transcript, get_preferred_device, read,
-                   write)
+from utils import (PATH_LIKE, bcolors, detect_language, get_preferred_device,
+                   read, write)
 
 read = partial(read, verbose=False)
 
-CHUNK_DURATION = int(2 * 60 * 1000)  # in milliseconds
+TSR = 8000
+CHUNK_DURATION = int(5 * 60 * 1000)  # in milliseconds
 CHUNK_OVERLAP = int(0.5 * 60 * 1000)
 DEVICE = get_preferred_device()
 
@@ -44,27 +45,24 @@ def transcribe_audio(audio_path: str, config_path: str) -> str:
     return response.to_dict()["choices"][0]["message"]["content"]
 
 
-def split_audio(audio_path: str, tmp_dir: str, sample_rate: int = 16000):
+def split_audio(audio_path: PATH_LIKE, tmp_dir: PATH_LIKE):
     """Split audio into chunks with specified sample rate"""
     audio = AudioSegment.from_mp3(audio_path)
-    
-    # Convert to target sample rate
-    if audio.frame_rate != sample_rate:
-        audio = audio.set_frame_rate(sample_rate)
+    audio = audio.set_frame_rate(TSR)
     
     os.makedirs(tmp_dir, exist_ok=True)
     
     for i, start in enumerate(range(0, len(audio), CHUNK_DURATION - CHUNK_OVERLAP)):
         chunk = audio[start:start + CHUNK_DURATION]
         out_path = os.path.join(tmp_dir, f"chunk_{i:02d}.mp3")
-        chunk.export(out_path, format="mp3", codec="libmp3lame", parameters=["-ar", str(sample_rate), "-ac", "1"])
+        chunk.export(out_path, format="mp3", codec="libmp3lame", parameters=["-ar", str(TSR), "-ac", "1"])
         if start + CHUNK_DURATION >= len(audio):
             break
             
-    print(f"Audio split into {len(os.listdir(tmp_dir))} chunks at {sample_rate}Hz.")
+    print(f"Audio split into {len(os.listdir(tmp_dir))} chunks at {TSR}Hz.")
     os.symlink(os.path.abspath(audio_path), os.path.join(tmp_dir, "original.wav"))
 
-def transcribe_chunks(tmp_dir: str, config_path: str):
+def transcribe_chunks(tmp_dir: PATH_LIKE, config_path: PATH_LIKE):
     for chunk_file in tqdm(sorted([f for f in os.listdir(tmp_dir) if f.endswith(".mp3")]), desc="Transcribing"):
         chunk_path = os.path.join(tmp_dir, chunk_file)
         start_time = time.time()
@@ -76,9 +74,9 @@ def transcribe_chunks(tmp_dir: str, config_path: str):
         
         print(f"Transcript saved to {chunk_path.replace('.mp3', '_transcript.txt')} in {time_taken:.2f} seconds.")
 
-def align(tmp_dir: str):
+def prev_align(tmp_dir: str):
     print("Aligning...")
-    lang = get_language_from_transcript(read(f"{tmp_dir}/chunk_00_transcript.txt"))    
+    lang = detect_language(f"{tmp_dir}/chunk_00_transcript.txt")
     for transcript_file in tqdm(sorted([f for f in os.listdir(tmp_dir) if f.endswith("_transcript.txt")]), desc="Aligning"):
         transcript_path = os.path.join(tmp_dir, transcript_file)
         out_file = transcript_path.replace("_transcript.txt", "_timestamps.json")
@@ -95,6 +93,9 @@ def align(tmp_dir: str):
         else:
             print(f"Timestamps already exist at {out_file}.")
 
+def align(tmp_dir: str):
+    transcript_file = os.path.join(tmp_dir, "full_transcript.txt")
+    align_and_save(os.path.join(tmp_dir, "original.wav"), transcript_file, os.path.join(tmp_dir, "full_timestamps.json"), device=DEVICE, language_code=detect_language(transcript_file))
 
 def diarize(tmp_dir: str, num_speakers: int | None):
     for timestamp_file in tqdm(sorted([f for f in os.listdir(tmp_dir) if f.endswith("_timestamps.json")]), desc="Diarizing"):
@@ -131,7 +132,7 @@ def merge_transcripts(tmp_dir: str) -> str:
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--audio_path", type=str, required=True, help="Path to the audio file.")
-    parser.add_argument("--config", type=str, default="asr_final.json", help="Name of the configuration file.") # best is asr_final_from_chatui.yaml
+    parser.add_argument("--config", type=str, default="asr_final_from_chatui.yaml", help="Name of the configuration file.") # best is asr_final_from_chatui.yaml
     parser.add_argument("--out_dir_suffix", type=str, default="", help="Suffix to append to the output directory.")
     parser.add_argument("--num_speakers", type=int, default=None, help="Number of speakers to diarize.")
     parser.add_argument("-t", "--transcribe", action="store_true", help="Run transcription.")
@@ -143,19 +144,19 @@ def parse_args():
     return args
 
 if __name__ == "__main__":
-    args = parse_args()        
-    tmp_dir = f"tmp_{os.path.basename(args.audio_path).replace('.mp3', '')}{args.out_dir_suffix}"
+    args = parse_args()     
+    if not args.out_dir_suffix:
+        args.out_dir_suffix = args.config.split(".")[0]   
+    tmp_dir = f"new/best/{os.path.basename(args.audio_path).replace('.mp3', '')}{args.out_dir_suffix}"
     if os.path.exists(tmp_dir):
         if args.fresh:
-            print(f"Removing existing temporary directory {tmp_dir}.")
+            print(f"{bcolors.WARNING}Removing existing temporary directory {tmp_dir}.{bcolors.ENDC}")
             os.system(f"rm -rf {tmp_dir}")
-        else:
-            raise FileExistsError(f"Temporary directory {tmp_dir} already exists. Use --fresh to overwrite.")
         
-    split_audio(args.audio_path, tmp_dir)
+    split_audio(args.audio_path, tmp_dir) if not os.path.islink(os.path.join(tmp_dir, "original.wav")) else None
     if args.transcribe:
         config_path = f"configs/{args.config}"
-        print("Using config:", config_path)
+        print(f"{bcolors.OKBLUE}Using config: {config_path}{bcolors.ENDC}")
         transcribe_chunks(tmp_dir, config_path)
         merge_transcripts(tmp_dir)
     

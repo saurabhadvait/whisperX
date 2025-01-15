@@ -25,7 +25,8 @@ vad_model = load_vad_model(device)
 
 # VAD parameters
 vad_params = {"vad_onset": 0.500, "vad_offset": 0.363}
-chunk_size = 120  # Maximum chunk size in seconds
+chunk_size = 150  # Maximum chunk size in seconds
+overlap = 30  # Overlap between chunks in seconds
 
 
 def process_and_transcribe(audio_path: str, output_dir: str):
@@ -78,12 +79,12 @@ def process_and_transcribe(audio_path: str, output_dir: str):
         chunk_transcript_path = os.path.join(output_dir, f"chunk_{idx:02d}_transcript.txt")
         with open(chunk_transcript_path, "w") as f:
             f.write(transcript)
-    os.symlink(os.path.abspath(audio_path), os.path.join(output_dir, "original.wav"))
     merged_transcript_path = os.path.join(output_dir, "merged_transcript.txt")
     with open(merged_transcript_path, "w") as f:
         f.write("\n----------\n".join(merged_transcript))
     print(f"Merged transcript saved at: {merged_transcript_path}")
     write(os.path.join(output_dir, "result.json"), segments)
+    os.symlink(os.path.abspath(audio_path), os.path.join(output_dir, "original.wav"))
 
 # Run the transcription process
 process_and_transcribe(audio_path, output_dir)
