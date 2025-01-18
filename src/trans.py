@@ -8,8 +8,9 @@ import numpy as np
 import torch
 from pydub import AudioSegment
 
-from transcribe import transcribe_audio as transcribe_audio_with_openai
-from transcribe import write
+from src.prev_transcribe import \
+    transcribe_audio as transcribe_audio_with_openai
+from src.prev_transcribe import write
 from whisperx.asr import (SAMPLE_RATE, List, SingleSegment, load_audio,
                           load_vad_model, merge_chunks)
 

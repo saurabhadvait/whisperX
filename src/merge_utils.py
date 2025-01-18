@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List, Tuple
 
-from utils import write
+from src.utils import write
 
 
 def find_longest_consecutive_overlap(a: List[str], b: List[str]) -> Tuple[int, int, int]:
@@ -54,7 +54,8 @@ def merge(first_tr: str, second_tr: str) -> str:
     return {
         "merged": first_tr[: f[sf + ml - 1]["end"]] + second_tr[s[ss + ml - 1]["end"] :],
         "end_of_second": s[ss + ml - 1]["end"],  # start is inclusive and end is exclusive
-        "end_in_merged": f[sf + ml - 1]["end"]
+        "end_in_merged": f[sf + ml - 1]["end"],
+        "match_length": ml
     }
 
 if __name__ == "__main__":

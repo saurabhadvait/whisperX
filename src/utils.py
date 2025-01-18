@@ -30,7 +30,7 @@ def detect_language(transcript_file: PATH_LIKE) -> str:
         raise ValueError("Transcript is empty.")
     return detect(transcript)
     
-@lru_cache(maxsize=None)
+@lru_cache()
 def get_preferred_device() -> torch.device:
     if torch.cuda.is_available(): return torch.device("cuda")
     elif torch.backends.mps.is_available(): return torch.device("mps")

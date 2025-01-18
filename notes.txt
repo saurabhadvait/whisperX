@@ -3,3 +3,6 @@ Type: transformers.models.wav2vec2.modeling_wav2vec2.Wav2Vec2ForCTC
 
 # Wav2Vec2 Processing Details
 - Outputs 50 phonemes or tokens (possibly repeated) per second of audio. That is 20ms per phoneme/token or 320 raw values (at 16k sampling rate) per phoneme/token. Speech has a rate of 10-15 phonemes per second.
+
+# OpenAI audio-preview model
+Audio Input takes 10 tokens/s irrespective of the sampling rate.
