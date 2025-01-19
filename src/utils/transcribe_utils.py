@@ -7,8 +7,7 @@ from omegaconf import OmegaConf
 from openai import OpenAI
 from pydub import AudioSegment
 
-from src.merge_utils import merge
-from src.utils import bcolors, get_preferred_device, read, write
+from src.utils import bcolors, get_preferred_device, merge, read, write
 
 read = partial(read, verbose=False)
 DEVICE = get_preferred_device()

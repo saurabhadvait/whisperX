@@ -4,7 +4,7 @@ import os
 from functools import partial
 
 import whisperx
-from utils import PATH_LIKE, read, write
+from src.utils import PATH_LIKE, read, write
 from whisperx.new_alignment import (AlignedTranscriptionResult, align,
                                     load_align_model, load_audio)
 
