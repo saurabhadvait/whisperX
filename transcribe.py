@@ -18,7 +18,7 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument("--audio_path", type=str, required=True, help="Path to the audio file.")
     parser.add_argument("--config", type=str, default="asr_final_from_chatui.yaml", help="Name of the configuration file.") # best is asr_final_from_chatui.yaml
-    parser.add_argument("--out_dir_suffix", type=str, default="", help="Suffix to append to the output directory.")
+    parser.add_argument("--suffix", type=str, default="", help="Suffix to append to the output directory.")
     parser.add_argument("--num_speakers", type=int, default=None, help="Number of speakers to diarize.")
     parser.add_argument("-t", "--transcribe", action="store_true", help="Run transcription.")
     parser.add_argument("-a", "--align", action="store_true", help="Run alignment after transcription.")
@@ -30,7 +30,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()     
-    tmp_dir = f"results/{args.config.split('.')[0]}" + (f"_{args.out_dir_suffix}" if args.out_dir_suffix else "") + f"/{os.path.basename(args.audio_path).replace('.mp3', '')}" 
+    tmp_dir = f"results/{args.config.split('.')[0]}" + (f"_{args.suffix}" if args.suffix else "") + f"/{os.path.basename(args.audio_path).replace('.mp3', '')}" 
     print(f"{bcolors.OKGREEN}Output directory: {tmp_dir}{bcolors.ENDC}")
     if os.path.exists(tmp_dir):
         if args.fresh:

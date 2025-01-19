@@ -6,9 +6,6 @@ messages:
           **Task:** Transcribe the audio, preserving the original language and script for each word or phrase.
 
           **Instructions:**
-
-          1. **Noise Reduction:** Clean the audio by removing background noise, music, or any distractions for clarity.
-          2. **Language Detection and Script Maintenance:** 
             - Detect the language of every word or phrase as spoken. 
             - Transcribe words in their original language and script: 
               - Hindi words in **Devanagari script** (e.g., "ज्ञान," "शक्ति").
