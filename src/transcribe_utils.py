@@ -14,20 +14,15 @@ read = partial(read, verbose=False)
 DEVICE = get_preferred_device()
 TSR = 16000
 
-# Primary / initial chunk size: 10 min + overlap
 INITIAL_CHUNK_DURATION_MS = 10 * 60 * 1000
 CHUNK_OVERLAP_MS = 30 * 1000
 
-# Fallback chunk sizes for just the failing region [chunk i-1, chunk i]
 FALLBACK_SIZES = [
     5 * 60 * 1000,  # 5min
     2 * 60 * 1000,  # 2min
     60 * 1000,      # 1min
 ]
 
-###############################################################################
-# 1) Split a region of audio with a specified chunk size & overlap
-###############################################################################
 def split_audio_region(
     audio_path: str,
     tmp_dir: str,
@@ -36,7 +31,6 @@ def split_audio_region(
     start_ms: int = 0,
     end_ms: int = None,
     prefix: str = "chunk",
-    remove_old: bool = True
 ) -> List[dict]:
     audio = AudioSegment.from_file(audio_path).set_frame_rate(TSR)
     if end_ms is None or end_ms > len(audio):
@@ -44,11 +38,6 @@ def split_audio_region(
 
     region = audio[start_ms:end_ms]
     os.makedirs(tmp_dir, exist_ok=True)
-
-    if remove_old:
-        for f in os.listdir(tmp_dir):
-            if f.startswith(prefix) and f.endswith(".mp3"):
-                os.remove(os.path.join(tmp_dir, f))
 
     step_size = chunk_duration_ms - chunk_overlap_ms
     chunk_info = []
@@ -71,15 +60,10 @@ def split_audio_region(
         pos += step_size
 
     print(
-        f"{bcolors.OKCYAN}Split '{prefix}': {len(chunk_info)} chunks, "
-        f"{chunk_duration_ms//60000} min + overlap={chunk_overlap_ms//1000}s{bcolors.ENDC}"
+        f"{bcolors.OKCYAN}Split '{prefix}': {len(chunk_info)} chunks of {chunk_duration_ms//60000}m, overlap={chunk_overlap_ms//1000}s{bcolors.ENDC}"
     )
     return chunk_info
 
-###############################################################################
-# 2) Fallback routine: try each size in FALLBACK_SIZES for sub-region [start_ms, end_ms].
-#    Returns a single merged text of that region or raises if all fail.
-###############################################################################
 def fallback_subregion(
     audio_path: str,
     config_path: str,
@@ -98,21 +82,19 @@ def fallback_subregion(
         audio_path,
         tmp_dir,
         chunk_duration_ms=size,
-        chunk_overlap_ms=0,  # no overlap or small overlap, your choice
+        chunk_overlap_ms=CHUNK_OVERLAP_MS,
         start_ms=start_ms,
         end_ms=end_ms,
-        prefix=f"{prefix}_{size//60000}m",
-        remove_old=True
+        prefix=prefix,
     )
 
-    # Now transcribe & merge these sub-chunks
     sub_result, success = try_transcribe_merge(sub_chunks, config_path, min_match_length)
     if success:
         return sub_result
     else:
         print(
             f"{bcolors.WARNING}[fallback_subregion] Overlap fail with chunk size="
-            f"{size//60000}m, trying next smaller...{bcolors.ENDC}"
+            f"{size/60000:0.1f}m, trying next smaller...{bcolors.ENDC}"
         )
         return fallback_subregion(
             audio_path,
@@ -125,10 +107,6 @@ def fallback_subregion(
             prefix
         )
 
-###############################################################################
-# 3) Helper to transcribe & merge a list of chunks linearly
-#    Returns (merged_text, success_bool)
-###############################################################################
 def try_transcribe_merge(
     chunk_info: List[dict],
     config_path: str,
@@ -138,11 +116,13 @@ def try_transcribe_merge(
     for ck in chunk_info:
         txt_path = ck["path"].replace(".mp3", "_transcript.txt")
         if not os.path.exists(txt_path):
+            print(f"{bcolors.OKBLUE}Transcribing from {ck['start_ms']/60000:0.1f}m to {ck['end_ms']/60000:0.1f}m{bcolors.ENDC}")
             t = transcribe_audio(ck["path"], config_path).strip("...")
             if not t:
                 return (None, False)
             write(txt_path, t)
         else:
+            print(f"{bcolors.WARNING}Transcript already exists for {ck['path']} => skipping{bcolors.ENDC}")
             t = read(txt_path).strip()
 
         if not merged_txt:
@@ -158,9 +138,6 @@ def try_transcribe_merge(
         merged_txt = merged_txt[:-1000] + out["merged"] + t[1000:]
     return (merged_txt, True)
 
-###############################################################################
-# 4) Transcribe a single chunk with your config (OpenAI or others)
-###############################################################################
 def transcribe_audio(audio_path: str, config_path: str) -> str:
     from omegaconf import OmegaConf
     cfg = OmegaConf.to_container(OmegaConf.load(config_path), resolve=True)
@@ -183,13 +160,6 @@ def transcribe_audio(audio_path: str, config_path: str) -> str:
     ).to_dict()
     return resp["choices"][0]["message"]["content"]
 
-###############################################################################
-# 5) The main function with 'safe_merged' and 'unsafe_merged' buffers
-#    - Split entire audio into big ~10min chunks
-#    - For each chunk i, try merging with unsafe_merged
-#    - If success => move safe portion from unsafe => safe_merged
-#    - If fail => partial fallback on [chunk i-1, chunk i], replace unsafe_merged
-###############################################################################
 def transcribe_and_merge_with_partial_fallback(
     audio_path: str,
     config_path: str,
@@ -201,16 +171,16 @@ def transcribe_and_merge_with_partial_fallback(
 ) -> str:
     os.makedirs(tmp_dir, exist_ok=True)
     if not os.path.islink(os.path.join(tmp_dir, "original.wav")):
+        audio = AudioSegment.from_file(audio_path)
+        print(f"{bcolors.BOLD}Audio duration: {len(audio)/60000:0.1f} min{bcolors.ENDC}")
         os.symlink(os.path.abspath(audio_path), os.path.join(tmp_dir, "original.wav"))
 
-    # 1) Split entire audio into ~10min chunks
     chunk_info = split_audio_region(
         audio_path=audio_path,
         tmp_dir=tmp_dir,
         chunk_duration_ms=initial_chunk_size,
         chunk_overlap_ms=overlap_ms,
         prefix="main",
-        remove_old=True
     )
 
     # We'll keep two buffers:
@@ -224,9 +194,9 @@ def transcribe_and_merge_with_partial_fallback(
         ck = chunk_info[i]
         txt_path = ck["path"].replace(".mp3", "_transcript.txt")
 
-        # Transcribe if needed
         if not os.path.exists(txt_path):
-            t = transcribe_audio(ck["path"], config_path).strip("...")
+            print(f"{bcolors.OKBLUE}Transcribing {initial_chunk_size//60000}m from {ck['start_ms']/60000:0.1f}m to {ck['end_ms']/60000:0.1f}m{bcolors.ENDC}")
+            t = transcribe_audio(ck["path"], config_path).strip().strip("...")
             if not t:
                 raise RuntimeError(f"Empty transcript for {ck['path']}")
             write(txt_path, t)
@@ -239,14 +209,11 @@ def transcribe_and_merge_with_partial_fallback(
             i += 1
             continue
 
-        # Attempt to merge chunk i with last 1000 of unsafe_merged
-        snippet_old = unsafe_merged[-1000:] if len(unsafe_merged) > 1000 else unsafe_merged
-        snippet_new = t[:1000]
-        out = merge(snippet_old, snippet_new)
+        out = merge(unsafe_merged[-1000:], t[:1000])
         ml = out["match_length"]
         if ml < min_match_length:
             # Merge fail => partial fallback on [chunk i-1, chunk i]
-            print(f"{bcolors.WARNING}Low overlap {ml} => fallback for chunk {i-1} & {i}{bcolors.ENDC}")
+            print(f"{bcolors.WARNING}Low overlap of only {ml} tokens => fallback for chunk {i-1} & {i}{bcolors.ENDC}")
             region_start = chunk_info[i-1]["start_ms"]
             region_end   = ck["end_ms"]
 
@@ -259,7 +226,7 @@ def transcribe_and_merge_with_partial_fallback(
                 end_ms=region_end,
                 fallback_sizes=fallback_sizes,
                 min_match_length=min_match_length,
-                prefix=f"fix_{i-1}_{i}"
+                prefix=f"fix_{region_start/60000:0.1f}m_{region_end/60000:0.1f}m"
             )
 
             # Replace entire unsafe_merged with sub_result,

@@ -13,7 +13,7 @@ messages:
             - Transcribe words in their original language and script: 
               - Hindi words in **Devanagari script** (e.g., "ज्ञान," "शक्ति").
               - English words in **Roman script** (e.g., "knowledge," "power").
-          3. **Speaker Attribution:** Differentiate speakers by carefully identifying voice changes. Use consistent labels (e.g., Speaker 1, Speaker 2).
+          3. **Speaker Attribution:** Differentiate speakers by carefully identifying voice changes. Use consistent labels (e.g., Speaker 1, Speaker 2). There will be either 1 or 2 speakers in the audio. Ignore anything spoken by the audience.
 
           **Output Requirements:**
           - Present the transcription as a **single continuous paragraph**.
@@ -28,7 +28,7 @@ messages:
 modalities:
   - text
 temperature: 0
-max_completion_tokens: 2048
+max_completion_tokens: 4096
 top_p: 1
 frequency_penalty: 0
 presence_penalty: 0

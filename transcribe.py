@@ -10,7 +10,8 @@ from openai import OpenAI
 from pydub import AudioSegment
 from tqdm import tqdm
 
-from src.working_transcribe_utils import bcolors, transcribe_segment
+from src.transcribe_utils import (bcolors,
+                                  transcribe_and_merge_with_partial_fallback)
 
 
 def parse_args():
@@ -29,7 +30,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()     
-    tmp_dir = f"results/{args.config.split('.')[0]}/{os.path.basename(args.audio_path).replace('.mp3', '')}" + (f"_{args.out_dir_suffix}" if args.out_dir_suffix else "")
+    tmp_dir = f"results/{args.config.split('.')[0]}" + (f"_{args.out_dir_suffix}" if args.out_dir_suffix else "") + f"/{os.path.basename(args.audio_path).replace('.mp3', '')}" 
     print(f"{bcolors.OKGREEN}Output directory: {tmp_dir}{bcolors.ENDC}")
     if os.path.exists(tmp_dir):
         if args.fresh:
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     if args.transcribe:
         config_path = f"configs/{args.config}"
         print(f"{bcolors.OKBLUE}Using config: {config_path}{bcolors.ENDC}")
-        transcribe_segment(args.audio_path, config_path, tmp_dir)
+        transcribe_and_merge_with_partial_fallback(args.audio_path, config_path, tmp_dir)
         # transcribe_and_merge_chunks(tmp_dir, config_path)
         # transcribe_chunks(tmp_dir, config_path)
         # merge_transcripts(tmp_dir)
