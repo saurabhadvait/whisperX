@@ -1,0 +1,32 @@
+model: gpt-4o-audio-preview
+messages:
+  - role: system
+    content:
+      - text: |
+          **Task:** Transcribe the audio, preserving the original language and script for each word or phrase.
+
+          **Instructions:**
+
+          1. **Noise Reduction:** Clean the audio by removing background noise, music, or any distractions for clarity.
+          2. **Language Detection and Script Maintenance:** 
+            - Detect the language of every word or phrase as spoken. 
+            - Transcribe words in their original language and script: 
+              - Hindi words in **Devanagari script** (e.g., "ज्ञान," "शक्ति").
+              - English words in **Roman script** (e.g., "knowledge," "power").
+
+          **Output Requirements:**
+          - Present the transcription as a **single continuous paragraph**.
+          - Maintain spelling accuracy for all languages and scripts.
+        type: text
+  - role: user
+    content:
+      - input_audio:
+          format: mp3
+        type: input_audio
+modalities:
+  - text
+temperature: 0
+max_completion_tokens: 4096
+top_p: 1
+frequency_penalty: 0
+presence_penalty: 0

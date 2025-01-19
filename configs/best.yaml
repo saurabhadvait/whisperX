@@ -2,6 +2,7 @@ model: gpt-4o-audio-preview
 messages:
   - role: system
     content:
+    # Remove "There will be either 1 or 2 speakers in the audio. Ignore anything spoken by the audience." if wrong results are observed.
       - text: |
           **Task:** Transcribe the audio with speaker differentiation, preserving the original language and script for each word or phrase.
 

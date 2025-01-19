@@ -37,7 +37,6 @@ def split_audio_region(
         end_ms = len(audio)
 
     region = audio[start_ms:end_ms]
-    os.makedirs(tmp_dir, exist_ok=True)
 
     step_size = chunk_duration_ms - chunk_overlap_ms
     chunk_info = []
@@ -169,7 +168,6 @@ def transcribe_and_merge_with_partial_fallback(
     fallback_sizes: List[int] = FALLBACK_SIZES,
     min_match_length: int = 10
 ) -> str:
-    os.makedirs(tmp_dir, exist_ok=True)
     if not os.path.islink(os.path.join(tmp_dir, "original.wav")):
         audio = AudioSegment.from_file(audio_path)
         print(f"{bcolors.BOLD}Audio duration: {len(audio)/60000:0.1f} min{bcolors.ENDC}")

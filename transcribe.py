@@ -40,6 +40,8 @@ if __name__ == "__main__":
     # split_audio(args.audio_path, tmp_dir) if not os.path.islink(os.path.join(tmp_dir, "original.wav")) else None
     if args.transcribe:
         config_path = f"configs/{args.config}"
+        os.makedirs(tmp_dir, exist_ok=True)
+        os.system(f"cp {config_path} {tmp_dir}")
         print(f"{bcolors.OKBLUE}Using config: {config_path}{bcolors.ENDC}")
         transcribe_and_merge_with_partial_fallback(args.audio_path, config_path, tmp_dir)
         # transcribe_and_merge_chunks(tmp_dir, config_path)
