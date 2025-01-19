@@ -4,10 +4,8 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 
 from src.align import add_speaker_diarization, align_and_save
-from src.transcribe_utils import (bcolors, detect_language,
-                                  transcribe_and_merge_with_partial_fallback)
 from src.utils import (bcolors, detect_language, get_preferred_device, read,
-                       write)
+                       transcribe_and_merge_with_partial_fallback)
 
 DEVICE = get_preferred_device()
 def align(tmp_dir: str):
