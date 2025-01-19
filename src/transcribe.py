@@ -1,18 +1,31 @@
-import base64
-import json
 import os
-import time
 from argparse import ArgumentParser
-from functools import partial
-from typing import Optional
 
-from openai import OpenAI
-from pydub import AudioSegment
 from tqdm import tqdm
 
-from src.transcribe_utils import (bcolors,
+from src.align import add_speaker_diarization, align_and_save
+from src.transcribe_utils import (bcolors, detect_language,
                                   transcribe_and_merge_with_partial_fallback)
+from src.utils import (bcolors, detect_language, get_preferred_device, read,
+                       write)
 
+DEVICE = get_preferred_device()
+def align(tmp_dir: str):
+    transcript_file = os.path.join(tmp_dir, "complete_transcript.txt")
+    align_and_save(os.path.join(tmp_dir, "original.wav"), transcript_file, os.path.join(tmp_dir, "full_timestamps.json"), device=DEVICE, language_code=detect_language(transcript_file))
+
+def diarize(tmp_dir: str, num_speakers: int | None):
+    for timestamp_file in tqdm(sorted([f for f in os.listdir(tmp_dir) if f.endswith("_timestamps.json")]), desc="Diarizing"):
+        timestamp_path = os.path.join(tmp_dir, timestamp_file)
+        out_file = timestamp_path.replace("_timestamps.json", "_diarized.json")
+        add_speaker_diarization(
+            audio=timestamp_path.replace("_timestamps.json", ".mp3"),
+            out_file=out_file,
+            alignment_result=read(timestamp_path),
+            device=DEVICE,
+            num_speakers=num_speakers,
+        )
+        print(f"Diarization saved to {out_file}.")
 
 def parse_args():
     parser = ArgumentParser()
@@ -23,7 +36,7 @@ def parse_args():
     parser.add_argument("-t", "--transcribe", action="store_true", help="Run transcription.")
     parser.add_argument("-a", "--align", action="store_true", help="Run alignment after transcription.")
     parser.add_argument("-d", "--diarize", action="store_true", help="Run speaker diarization.")
-    parser.add_argument("--fresh", action="store_true", help="Run everything from scratch.")
+    parser.add_argument("-f", "--fresh", action="store_true", help="Run everything from scratch.")
     args = parser.parse_args()
     assert args.audio_path.endswith(".mp3"), "Only MP3 files are supported."
     return args
@@ -37,13 +50,15 @@ if __name__ == "__main__":
             print(f"{bcolors.WARNING}Removing existing directory {tmp_dir}{bcolors.ENDC}")
             os.system(f"rm -rf {tmp_dir}")
         
-    # split_audio(args.audio_path, tmp_dir) if not os.path.islink(os.path.join(tmp_dir, "original.wav")) else None
     if args.transcribe:
         config_path = f"configs/{args.config}"
         os.makedirs(tmp_dir, exist_ok=True)
         os.system(f"cp {config_path} {tmp_dir}")
         print(f"{bcolors.OKBLUE}Using config: {config_path}{bcolors.ENDC}")
         transcribe_and_merge_with_partial_fallback(args.audio_path, config_path, tmp_dir)
-        # transcribe_and_merge_chunks(tmp_dir, config_path)
-        # transcribe_chunks(tmp_dir, config_path)
-        # merge_transcripts(tmp_dir)
+        
+    if args.align:
+        align(tmp_dir)
+    
+    if args.diarize:
+        diarize(tmp_dir, args.num_speakers)

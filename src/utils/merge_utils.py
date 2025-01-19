@@ -1,7 +1,7 @@
 import re
 from typing import Dict, List, Tuple
 
-from src.utils import bcolors, write
+from src.utils import write
 
 
 def find_longest_consecutive_overlap(a: List[str], b: List[str]) -> Tuple[int, int, int]:
@@ -49,8 +49,6 @@ def merge(first_tr: str, second_tr: str) -> str:
     print(f"{ml} Matching tokens:{tokens_f[sf:sf+ml]}")
     if ml == 0 and len(tokens_f) > 0 and len(tokens_s) > 0:
         raise ValueError(f"No overlap found between the two transcripts: $${first_tr}\n$$\n{second_tr}")
-    if ml < 10:
-        print(f"{bcolors.WARNING}Low overlap found between the two transcripts: {ml} tokens.{bcolors.ENDC}")
     return {
         "merged": first_tr[: f[sf + ml - 1]["end"]] + second_tr[s[ss + ml - 1]["end"] :],
         "end_of_second": s[ss + ml - 1]["end"],  # start is inclusive and end is exclusive

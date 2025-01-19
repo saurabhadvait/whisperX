@@ -115,7 +115,7 @@ def try_transcribe_merge(
     for ck in chunk_info:
         txt_path = ck["path"].replace(".mp3", "_transcript.txt")
         if not os.path.exists(txt_path):
-            print(f"{bcolors.OKBLUE}Transcribing from {ck['start_ms']/60000:0.1f}m to {ck['end_ms']/60000:0.1f}m{bcolors.ENDC}")
+            print(f"{bcolors.WARNING}Transcribing from {ck['start_ms']/60000:0.1f}m to {ck['end_ms']/60000:0.1f}m{bcolors.ENDC}")
             t = transcribe_audio(ck["path"], config_path).strip("...")
             if not t:
                 return (None, False)
@@ -180,8 +180,6 @@ def transcribe_and_merge_with_partial_fallback(
         chunk_overlap_ms=overlap_ms,
         prefix="main",
     )
-
-    # We'll keep two buffers:
     # safe_merged = fully locked-in transcript
     # unsafe_merged = the tail end that might still be replaced if a fallback is triggered
     safe_merged = ""
@@ -251,7 +249,7 @@ def transcribe_and_merge_with_partial_fallback(
 
     # Combine final transcript
     final_transcript = safe_merged + unsafe_merged
-    out_path = os.path.join(tmp_dir, "full_transcript.txt")
+    out_path = os.path.join(tmp_dir, "complete_transcript.txt")
     write(out_path, final_transcript)
     print(f"{bcolors.OKGREEN}Final transcript saved => {out_path}{bcolors.ENDC}")
     return final_transcript
